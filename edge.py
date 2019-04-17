@@ -170,8 +170,23 @@ for i in range(b):
 		y_top_right = y_min
 	x_length = x_max - x_min
 	y_length = y_max - y_min
+	slope = (y1-y2) / (x2-x1)
 	if ((x_length <= x_deviation) | (y_length <= y_deviation)):
-		continue
+		continue #If the line is nearly horizontal / vertical, it doesn't belong to floor edge hence ignore.
+	if (slope > 0):#slope > 0 means line belongs to left edge of floor
+		if (x_min < x_bottom_left):#if current line is more to left than current bottom point(of final left floor edge),use bottom point of current line as bottom point(of final left floor edge)
+			x_bottom_left = x_min
+			y_bottom_left = y_max
+		if (x_max > x_top_left):#if current line is more to right than current top point(of final left floor edge), use top point of current line as top point(of final left floor edge)
+			x_top_left = x_max
+			y_top_left = y_min
+	else:#slope < 0 means line belongs to right edge of floor
+		if (x_max > x_bottom_right):#if current line is more to right than current bottom point(of final right floor edge),use bottom point of current line as bottom point(of final right floor edge)
+			x_bottom_right = x_max
+			y_bottom_right = y_max
+		if (x_min < x_top_right):#if current line is more to left than current top point(of final right floor edge), use top point of current line as top point(of final right floor edge)
+			x_top_right = x_min
+			y_top_right = y_min
 	cv2.line(src_c, (x1, y1), (x2, y2), (0, 255, 0), 1)
 	line_length = (x_length**2+y_length**2)**(1/2.0)
 	print "line length=",line_length,"x1 y1 x2 y2",x1, y1, x2, y2
