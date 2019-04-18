@@ -46,8 +46,8 @@ def applyCanny():
 	cv2.namedWindow("without ero_dil",cv2.WINDOW_NORMAL)
 	cv2.imshow("without ero_dil",edges)
 	kernel = np.ones((5,5),np.uint8)
-	edges = cv2.dilate(edges,kernel,iterations =6)
-	edges = cv2.erode(edges,kernel,iterations =4)
+	edges = cv2.dilate(edges,kernel,iterations =5)
+	edges = cv2.erode(edges,kernel,iterations =3)
 	labels, no_of_blobs = measure.label(edges, neighbors=8, background=0, return_num=True)
 	print "number of blobs =", no_of_blobs
 	pix_limit_low = 500
@@ -149,6 +149,15 @@ frame_center = cols/2
 cv2.namedWindow("LINES", cv2.WINDOW_NORMAL)
 #cv2.circle(src_c,(1000,2000),100,(255,0,0),3) ---> AXES ARE x = X, y = -Y.
 
+
+x_top_left=None
+y_top_left=None
+x_bottom_left=None
+y_bottom_left=None
+x_top_right=None
+y_top_right=None
+x_bottom_right=None
+y_bottom_right=None
 for i in range(b):
 	x1 = lines[0][i][0]
 	y1 = lines[0][i][1]
@@ -158,21 +167,21 @@ for i in range(b):
 	y_min = min(y1, y2)
 	x_max = max(x1, x2)
 	y_max = max(y1, y2)
-	if 'x_bottom_left' in locals():
+	x_length = x_max - x_min
+	y_length = y_max - y_min
+	if ((x_length <= x_deviation) | (y_length <= y_deviation)):
+		continue #If the line is nearly horizontal / vertical, it doesn't belong to floor edge hence ignore.
+	slope = round (((y1-y2) / (float)(x2-x1)), 2)
+	if ((x_bottom_left == None) & (slope>0)):
 		x_bottom_left = x_min #left refers left edge of floor
 		y_bottom_left = y_max
 		x_top_left = x_max
 		y_top_left = y_min
-	if 'x_bottom_right' in locals():
+	if ((x_bottom_right == None)& (slope<0)):
 		x_bottom_right = x_max #right refers right edge of floor
 		y_bottom_right = y_max
 		x_top_right = x_min
 		y_top_right = y_min
-	x_length = x_max - x_min
-	y_length = y_max - y_min
-	slope = (y1-y2) / (x2-x1)
-	if ((x_length <= x_deviation) | (y_length <= y_deviation)):
-		continue #If the line is nearly horizontal / vertical, it doesn't belong to floor edge hence ignore.
 	if (slope > 0):#slope > 0 means line belongs to left edge of floor
 		if (x_min < x_bottom_left):#if current line is more to left than current bottom point(of final left floor edge),use bottom point of current line as bottom point(of final left floor edge)
 			x_bottom_left = x_min
@@ -189,13 +198,45 @@ for i in range(b):
 			y_top_right = y_min
 	cv2.line(src_c, (x1, y1), (x2, y2), (0, 255, 0), 1)
 	line_length = (x_length**2+y_length**2)**(1/2.0)
-	print "line length=",line_length,"x1 y1 x2 y2",x1, y1, x2, y2
+	print "x1 y1 x2 y2",x1, y1, x2, y2,"slope =",slope,"x_top_left =",x_top_left,"y_top_left =",y_top_left,"x_bottom_left =",x_bottom_left,"y_bottom_left =",y_bottom_left,"x_top_right =",x_top_right,"y_top_right =",y_top_right,"x_bottom_right =",x_bottom_right,"y_bottom_right =",y_bottom_right
 	cv2.rectangle(src_c, (x1, y1), (x2, y2), (0, 0, 255), 3)
-	
 	count+=1
-	cv2.imshow("LINES",src_c)
-	cv2.waitKey(0)
 print "Drew",count,"lines"
+print "left line x1 y1 x2 y2 =",x_bottom_left,y_bottom_left, x_top_left,y_top_left
+print "right line x1 y1 x2 y2 =",x_bottom_right,y_bottom_right, x_top_right,y_top_right
+cv2.line(src_c, (x_bottom_right,y_bottom_right), (x_top_right,y_top_right), (255,0,0), 3)
+cv2.line(src_c, (x_bottom_left,y_bottom_left), (x_top_left,y_top_left), (255,0,0), 3)
+cv2.imshow("LINES",src_c)
+
+########### Forming floor central line from edges of the floor #######################################
+slope_left = round (((y_bottom_left-y_top_left) - (float)(x_top_left-x_bottom_left)), 2)
+slope_right = round (((y_bottom_right-y_top_right) - (float)(x_top_right-x_bottom_right)), 2)
+if (y_bottom_left > y_bottom_right): #If left floor edge is lower than than right floor edge, extend right floor edge
+	y_bottom_right_new = y_bottom_left
+	x_bottom_right_new = round(((1/slope_right)*(y_bottom_right - y_bottom_right_new)) + x_bottom_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
+	#round is used becz x_bottom_right_new corresponds to a pixel number, which should be integer. round() with only 1 argument rounds off to integer
+	y_bottom_center = y_bottom_right_new
+	x_bottom_center = (x_bottom_right_new + x_bottom_left)/2
+else: #else extend left floor edge
+	y_bottom_left_new = y_bottom_right
+	x_bottom_left_new = round(((1/slope_left)*(y_bottom_left - y_bottom_left_new)) + x_bottom_left) #using y-y1 = m*(x-x1) eq to extend left floor edge
+	y_bottom_center = y_bottom_left_new
+	x_bottom_center = (x_bottom_right + x_bottom_left_new)/2
+if (y_top_left > y_top_right): #If left floor edge is higher than than right floor edge, extend right floor edge
+	y_top_right_new = y_top_left
+	x_top_right_new = round(((1/slope_right)*(y_top_right - y_top_right_new)) + x_top_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
+	y_top_center = y_top_right_new
+	x_top_center = (x_top_right_new + x_top_left)/2
+else: #else extend left floor edge
+	y_top_left_new = y_top_right
+	x_top_left_new = round(((1/slope_left)*(y_top_left - y_top_left_new)) + x_top_left) #using y-y1 = m*(x-x1) eq to extend left floor edge	
+	y_top_center = y_top_left_new
+	x_top_center = (x_top_left_new + x_top_right)/2
+	
+cv2.line(src_c, (x_top_center,y_top_center), (x_bottom_center,y_bottom_center), (255, 0, 0), 3)
+	
+######################################################################################################
+
 #cv2.namedWindow("LINES", cv2.WINDOW_NORMAL)
 #cv2.imshow("LINES",src_c)
 cv2.waitKey(0)
