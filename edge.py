@@ -120,7 +120,7 @@ if lines is None:
 	sys.exit()
 
 a,b,c = lines.shape
-(rows, cols)=edges.shape
+(rows, cols)=edges.shape #edges and final_img are of same size.
 print "edges.shape =",edges.shape
 print "len(lines) =",len(lines)
 print "lines.shape =", lines.shape
@@ -213,28 +213,37 @@ slope_left = round (((y_bottom_left-y_top_left) - (float)(x_top_left-x_bottom_le
 slope_right = round (((y_bottom_right-y_top_right) - (float)(x_top_right-x_bottom_right)), 2)
 if (y_bottom_left > y_bottom_right): #If left floor edge is lower than than right floor edge, extend right floor edge
 	y_bottom_right_new = y_bottom_left
-	x_bottom_right_new = round(((1/slope_right)*(y_bottom_right - y_bottom_right_new)) + x_bottom_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
-	#round is used becz x_bottom_right_new corresponds to a pixel number, which should be integer. round() with only 1 argument rounds off to integer
+	x_bottom_right_new = (int)(((1/slope_right)*(y_bottom_right - y_bottom_right_new)) + x_bottom_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
+	#(int) is used becz x_bottom_right_new corresponds to a pixel number, which should be integer.
+	#Now find coordinate of floor center line
 	y_bottom_center = y_bottom_right_new
 	x_bottom_center = (x_bottom_right_new + x_bottom_left)/2
 else: #else extend left floor edge
 	y_bottom_left_new = y_bottom_right
-	x_bottom_left_new = round(((1/slope_left)*(y_bottom_left - y_bottom_left_new)) + x_bottom_left) #using y-y1 = m*(x-x1) eq to extend left floor edge
+	x_bottom_left_new = (int)(((1/slope_left)*(y_bottom_left - y_bottom_left_new)) + x_bottom_left) #using y-y1 = m*(x-x1) eq to extend left floor edge
 	y_bottom_center = y_bottom_left_new
 	x_bottom_center = (x_bottom_right + x_bottom_left_new)/2
 if (y_top_left > y_top_right): #If left floor edge is higher than than right floor edge, extend right floor edge
 	y_top_right_new = y_top_left
-	x_top_right_new = round(((1/slope_right)*(y_top_right - y_top_right_new)) + x_top_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
+	x_top_right_new = (int)(((1/slope_right)*(y_top_right - y_top_right_new)) + x_top_right) #using y-y1 = m*(x-x1) eq to extend right floor edge
 	y_top_center = y_top_right_new
 	x_top_center = (x_top_right_new + x_top_left)/2
 else: #else extend left floor edge
 	y_top_left_new = y_top_right
-	x_top_left_new = round(((1/slope_left)*(y_top_left - y_top_left_new)) + x_top_left) #using y-y1 = m*(x-x1) eq to extend left floor edge	
+	x_top_left_new = (int)(((1/slope_left)*(y_top_left - y_top_left_new)) + x_top_left) #using y-y1 = m*(x-x1) eq to extend left floor edge	
 	y_top_center = y_top_left_new
 	x_top_center = (x_top_left_new + x_top_right)/2
-	
-cv2.line(src_c, (x_top_center,y_top_center), (x_bottom_center,y_bottom_center), (255, 0, 0), 3)
-	
+
+###########################extending length of floor centerline so that it covers decent part of floor###########################
+slope_floor_center = (y_top_center-y_bottom_center)/((float)(x_bottom_center-x_top_center))#assigns float value
+x_top_center_new = (int)(x_top_center+(1/slope_floor_center)*(y_top_center-(rows/3)))
+x_bottom_center_new = (int)(x_top_center+(1/slope_floor_center)*(y_top_center-(rows-1)))
+floor_center_line = [x_top_center_new, (rows/3), x_bottom_center_new, (rows-1)]#in the order x1 y1 x2 y2 & assuming floor occupies 1/3rd of the frame height
+frame_center_line = [frame_center, (rows/3), frame_center, (rows-1)]#in the order x1 y1 x2 y2
+cv2.line(src_c, (floor_center_line[0], floor_center_line[1]), (floor_center_line[2],floor_center_line[3]), (255, 0, 0), 3)
+cv2.line(src_c, (frame_center_line[0],frame_center_line[1]), (frame_center_line[2],frame_center_line[3]),(0, 0, 255), 3)#center line of frame
+
+cv2.imshow("LINES",src_c)
 ######################################################################################################
 
 #cv2.namedWindow("LINES", cv2.WINDOW_NORMAL)
