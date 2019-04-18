@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from skimage import measure
 import sys
+import math
 
 print "EXECUTION STARTED"
 lowThreshold = 50
@@ -242,7 +243,12 @@ floor_center_line = [x_top_center_new, (rows/3), x_bottom_center_new, (rows-1)]#
 frame_center_line = [frame_center, (rows/3), frame_center, (rows-1)]#in the order x1 y1 x2 y2
 cv2.line(src_c, (floor_center_line[0], floor_center_line[1]), (floor_center_line[2],floor_center_line[3]), (255, 0, 0), 3)
 cv2.line(src_c, (frame_center_line[0],frame_center_line[1]), (frame_center_line[2],frame_center_line[3]),(0, 0, 255), 3)#center line of frame
-
+y_coor_POI = (int)(floor_center_line[1]+slope_floor_center*(floor_center_line[0]-frame_center))#y - coordinate of point of intersection of lines
+if(y_coor_POI >= (rows/3)):#If the lines intersect within the floor region, find the angle b/w them
+	y_distance = y_coor_POI-(rows/3)
+	x_coordinate = (int)(floor_center_line[0]+(1/slope_floor_center)*(floor_center_line[1]-(rows/3))) #finding x coordinate of the point on floor center line wheye y_coordinate is rows/3
+	x_distance = (x_coordinate-frame_center)
+	angle = math.atan(y_distance/x_distance)#-ve for bot lying on right half of floor & +ve for bot lying on left half of floor
 cv2.imshow("LINES",src_c)
 ######################################################################################################
 
